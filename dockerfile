@@ -3,6 +3,7 @@ FROM ubuntu:24.04
 
 #input GitHub runner version argument
 ARG RUNNER_VERSION
+ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL Author="Marcel L"
@@ -22,14 +23,16 @@ RUN apt-get install -y --no-install-recommends \
 
 # cd into the user directory, download and unzip the github actions runner
 RUN cd /home/docker && mkdir actions-runner && cd actions-runner \
-    && curl -O -L https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz \
-    && tar xzf ./actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
+    && if [ "$TARGETARCH" = "arm64" ]; then ARCH="arm64"; else ARCH="x64"; fi \
+    && curl -O -L https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${ARCH}-${RUNNER_VERSION}.tar.gz \
+    && tar xzf ./actions-runner-linux-${ARCH}-${RUNNER_VERSION}.tar.gz \
+    && rm ./actions-runner-linux-${ARCH}-${RUNNER_VERSION}.tar.gz
 
 # install some additional dependencies
 RUN chown -R docker ~docker && /home/docker/actions-runner/bin/installdependencies.sh
 
 # add over the start.sh script
-ADD scripts/start.sh start.sh
+COPY scripts/start.sh start.sh
 
 # make the script executable
 RUN chmod +x start.sh
